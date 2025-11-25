@@ -124,13 +124,7 @@ SUPABASE_DB_PASSWORD=<database password>  # only if using Supabase DB directly
 DATABASE_URL=postgresql://postgres:<password>@db.<project>.supabase.co:5432/postgres
 FRONTEND_ORIGIN=http://localhost:5500
 
-# Optional SMTP (only if you still send custom verification emails)
-SMTP_SERVER=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USERNAME=you@gmail.com
-SMTP_PASSWORD=<gmail app password>
-FROM_EMAIL=you@gmail.com
-```
+
 
 Frontend also needs Supabase values in `frontend-web/auth.js`:
 
