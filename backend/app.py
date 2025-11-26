@@ -129,7 +129,9 @@ def send_verification_email(email, code, username):
         return False
 
 def create_app():
-    app = Flask(__name__)
+    # Serve frontend from parent directory
+    frontend_path = os.path.join(os.path.dirname(__file__), '..', 'frontend-web')
+    app = Flask(__name__, static_folder=frontend_path, static_url_path='')
     app.config.from_object(Config)
     
     # Initialize extensions
@@ -170,6 +172,17 @@ def create_app():
     # Routes
     @app.route('/')
     def index():
+        """Serve index.html for root path"""
+        return send_from_directory(app.static_folder, 'index.html')
+    
+    @app.route('/<path:filename>')
+    def serve_static(filename):
+        """Serve static files (HTML, CSS, JS)"""
+        return send_from_directory(app.static_folder, filename)
+    
+    @app.route('/api/status')
+    def api_status():
+        """API status endpoint"""
         return jsonify({"status": "CivicFix API is operational"})
     
     # Email Verification Routes
