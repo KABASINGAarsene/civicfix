@@ -1814,7 +1814,11 @@ def create_app():
 if __name__ == '__main__':
     app = create_app()
     with app.app_context():
-        db.create_all()
+        try:
+            db.create_all()
+        except Exception as e:
+            print(f"Warning: Could not create database tables: {e}")
+            print("Continuing startup anyway...")
     
     print("Starting CivicFix Server (Flask + SocketIO)")
     print("Server: http://localhost:5000")
@@ -1828,6 +1832,6 @@ if __name__ == '__main__':
         socketio.run(
             app,
             debug=app.config['DEBUG'],
-            host='127.0.0.1',
-            port=5000
+            host='0.0.0.0',
+            port=int(os.environ.get('PORT', 5000))
         )
