@@ -1811,15 +1811,16 @@ def create_app():
     
     return app
 
+# Create app at module level for gunicorn
+app = create_app()
+with app.app_context():
+    try:
+        db.create_all()
+    except Exception as e:
+        print(f"Warning: Could not create database tables: {e}")
+        print("Continuing startup anyway...")
+
 if __name__ == '__main__':
-    app = create_app()
-    with app.app_context():
-        try:
-            db.create_all()
-        except Exception as e:
-            print(f"Warning: Could not create database tables: {e}")
-            print("Continuing startup anyway...")
-    
     print("Starting CivicFix Server (Flask + SocketIO)")
     print("Server: http://localhost:5000")
     print("Admin: http://localhost:5500/admin-request-code.html")
@@ -1833,5 +1834,6 @@ if __name__ == '__main__':
             app,
             debug=app.config['DEBUG'],
             host='0.0.0.0',
-            port=int(os.environ.get('PORT', 5000))
+            port=int(os.environ.get('PORT', 5000)),
+            allow_unsafe_werkzeug=True
         )
