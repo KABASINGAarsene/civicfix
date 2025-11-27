@@ -1,5 +1,5 @@
 // API configuration
-const API_BASE_URL = window.location.origin;
+const API_BASE_URL = 'http://localhost:5000';
 
 // Supabase configuration - You'll need to replace these with your actual values
 const SUPABASE_URL = 'https://ozaaasesvvjphzohfxoo.supabase.co';
@@ -57,6 +57,30 @@ class AuthManager {
                 this.currentUser = session.user;
                 this.token = session.access_token;
                 localStorage.setItem('supabase_token', this.token);
+                
+                // If user is confirmed in Supabase, mark as verified in our backend
+                if (session.user.email_confirmed_at) {
+                    console.log('[checkAuthState] User email confirmed in Supabase, marking as verified in backend');
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/api/auth/mark-verified`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                email: session.user.email
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            console.log('[checkAuthState] Email marked as verified in backend');
+                        } else {
+                            console.warn('[checkAuthState] Failed to mark email as verified:', response.status);
+                        }
+                    } catch (error) {
+                        console.error('[checkAuthState] Error marking email as verified:', error);
+                    }
+                }
             } else {
                 this.currentUser = null;
                 this.token = null;
@@ -81,13 +105,12 @@ class AuthManager {
 
     async signUp(email, password, username, userData = {}) {
         try {
-            // Register with Supabase - using Supabase's built-in email confirmation
-            // Email confirmation is enabled in Supabase dashboard
+            // First, register with Supabase but disable email confirmation
             const { data, error } = await supabase.auth.signUp({
                 email: email,
                 password: password,
                 options: {
-                    emailRedirectTo: `${window.location.origin}/login.html`, // Redirect to login after email confirmation
+                    emailRedirectTo: null, // Disable email confirmation
                     data: {
                         username: username,
                         phone: userData.phone || '',
@@ -100,10 +123,32 @@ class AuthManager {
 
             if (error) throw error;
 
-            // Supabase will send the confirmation email automatically
-            // User needs to check their email and click the confirmation link
-            showNotification('Registration successful! Please check your email to confirm your account.', 'success');
-            return { success: true, data, needsEmailConfirmation: true };
+            // Now send custom verification code via our backend
+            const response = await fetch(`${API_BASE_URL}/api/auth/send-verification`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    email: email,
+                    username: username,
+                    user_id: data.user.id,
+                    phone: userData.phone || '',
+                    province: userData.province || '',
+                    district: userData.district || '',
+                    sector: userData.sector || ''
+                })
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                // Don't show notification here - let the caller handle it
+                return { success: true, data, needsVerification: true };
+            } else {
+                showNotification(result.error || 'Error creating account.', 'error');
+                return { success: false, error: result.error };
+            }
 
         } catch (error) {
             console.error('Sign up error:', error);
@@ -114,42 +159,58 @@ class AuthManager {
 
     async signIn(email, password) {
         try {
-            // Try Supabase login first - if it succeeds, email is confirmed
+            // First check if user is verified in our backend
+            const verifyResponse = await fetch(`${API_BASE_URL}/api/auth/check-verification`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email })
+            });
+
+            if (verifyResponse.ok) {
+                const verifyData = await verifyResponse.json();
+                if (!verifyData.is_verified) {
+                    showNotification('Please verify your email before logging in.', 'error');
+                    return { success: false, error: 'Email not verified' };
+                }
+            }
+
+            // Try Supabase login
             const { data, error } = await supabase.auth.signInWithPassword({
                 email: email,
                 password: password
             });
 
             if (error) {
-                // If Supabase says email not confirmed, show helpful message
-                if (error.message.includes('Email not confirmed') || error.message.includes('email')) {
-                    showNotification('Please verify your email before logging in. Check your inbox for the confirmation link.', 'error');
-                    return { success: false, error: 'Email not verified' };
+                // If Supabase says email not confirmed, but our backend says it is, 
+                // we can proceed with a backend-only login
+                if (error.message.includes('Email not confirmed') && verifyResponse.ok) {
+                    const backendLogin = await fetch(`${API_BASE_URL}/api/auth/backend-login`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ email, password })
+                    });
+
+                    if (backendLogin.ok) {
+                        const loginData = await backendLogin.json();
+                        this.currentUser = loginData.user;
+                        this.token = loginData.token;
+                        localStorage.setItem('supabase_token', this.token);
+                        
+                        showNotification('Login successful!', 'success');
+                        this.updateUI();
+                        return { success: true, user: loginData.user };
+                    }
                 }
                 throw error;
             }
 
-            // Login successful - Supabase has confirmed the email
-            // The backend will automatically sync the verification status when the token is used
             this.currentUser = data.user;
             this.token = data.session.access_token;
             localStorage.setItem('supabase_token', this.token);
-            
-            // Trigger a sync by making a simple API call (this will update is_email_verified in our DB)
-            // The token_required decorator will handle the sync automatically
-            try {
-                await fetch(`${API_BASE_URL}/api/auth/check-verification`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${this.token}`
-                    },
-                    body: JSON.stringify({ email })
-                });
-            } catch (syncError) {
-                // Non-critical - sync will happen on next API call
-                console.log('Verification sync will happen on next API call');
-            }
             
             showNotification('Login successful!', 'success');
             this.updateUI();

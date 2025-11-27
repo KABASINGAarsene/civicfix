@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - CivicFix</title>
-    <link rel="stylesheet" href="styles.css">
     <link rel="icon" type="image/jpeg" href="icons/civicfix-favicon.jpg">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <nav class="navbar">
@@ -64,15 +64,6 @@
     <script src="auth.js?v=3"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Check for message in URL parameters (from registration redirect)
-            const urlParams = new URLSearchParams(window.location.search);
-            const message = urlParams.get('message');
-            if (message) {
-                showNotification(message, 'success');
-                // Clean up URL by removing the message parameter
-                window.history.replaceState({}, document.title, window.location.pathname);
-            }
-
             const loginForm = document.getElementById('login-form');
             const forgotPasswordLink = document.getElementById('forgot-password');
             const forgotPasswordForm = document.getElementById('forgot-password-form');

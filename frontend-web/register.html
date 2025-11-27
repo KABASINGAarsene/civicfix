@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register - CivicFix</title>
-    <link rel="stylesheet" href="styles.css">
     <link rel="icon" type="image/jpeg" href="icons/civicfix-favicon.jpg">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <nav class="navbar">
@@ -180,19 +180,19 @@
                 try {
                     const result = await authManager.signUp(email, password, username, userData);
                     
-                    if (result.success && result.needsEmailConfirmation) {
+                    if (result.success && result.needsVerification) {
                         // Clear form
                         registerForm.reset();
                         
-                        // Show success message and instructions
-                        showNotification('Registration successful! Please check your email and click the confirmation link to activate your account.', 'success');
+                        // Show popup message
+                        showNotification('✓ Check your email and confirm the signup', 'success');
                         
-                        // Redirect to login page after 3 seconds with a message
+                        // Redirect to login page after 2 seconds
                         setTimeout(() => {
-                            window.location.href = `login.html?message=Please check your email to confirm your account before logging in.`;
-                        }, 3000);
+                            window.location.href = 'login.html';
+                        }, 2000);
                     } else if (result.success) {
-                        // If somehow no confirmation needed, go to login
+                        // Fallback to login page if no verification needed
                         setTimeout(() => {
                             window.location.href = 'login.html';
                         }, 2000);
@@ -228,3 +228,4 @@
     </script>
 </body>
 </html>
+
