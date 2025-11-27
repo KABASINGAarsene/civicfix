@@ -40,7 +40,7 @@ class WebSocketManager {
                 return;
             }
 
-            this.socket = io('http://localhost:5000', {
+            this.socket = io(API_BASE_URL, {
                 transports: ['websocket', 'polling'],
                 timeout: 20000,
                 forceNew: false, // Allow connection reuse
@@ -136,7 +136,7 @@ class WebSocketManager {
                 return false;
             }
 
-            const response = await fetch('http://localhost:5000/api/auth/verify', {
+            const response = await fetch(`${API_BASE_URL}/api/auth/verify`, {
                 headers: authManager.getAuthHeaders()
             });
             
@@ -394,7 +394,7 @@ class WebSocketManager {
         const notificationBadge = document.getElementById('notification-badge');
         if (notificationBadge && window.authManager && typeof authManager.isAuthenticated === 'function' && authManager.isAuthenticated()) {
             // Fetch latest notification count
-            fetch('http://localhost:5000/api/notifications', {
+            fetch(`${API_BASE_URL}/api/notifications`, {
                 headers: authManager.getAuthHeaders()
             })
             .then(response => response.json())

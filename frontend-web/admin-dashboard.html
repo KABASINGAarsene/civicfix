@@ -1054,6 +1054,9 @@
     <script src="notifications.js"></script>
     <script src="websocket.js"></script>
     <script>
+        // API configuration
+        const API_BASE_URL = 'https://civicfix-cwz8.onrender.com';
+        
         class AdminDashboard {
             constructor() {
                 this.issues = [];
@@ -1121,7 +1124,7 @@
                         console.log('Auto-refreshing issues...');
                     }
                     
-                    const response = await fetch('http://localhost:5000/api/admin/issues', {
+                    const response = await fetch(`${API_BASE_URL}/api/admin/issues`, {
                         headers: {
                             'Authorization': `Bearer ${this.adminToken}`
                         }
@@ -1372,7 +1375,7 @@
 
             async updateIssueStatus(issueId, newStatus) {
                 try {
-                    const response = await fetch(`http://localhost:5000/api/admin/issues/${issueId}/status`, {
+                    const response = await fetch(`${API_BASE_URL}/api/admin/issues/${issueId}/status`, {
                         method: 'PUT',
                         headers: {
                             'Authorization': `Bearer ${this.adminToken}`,
@@ -1432,7 +1435,7 @@
                 const phone = document.getElementById('profile-phone').value;
                 
                 try {
-                    const response = await fetch('http://localhost:5000/api/admin/profile', {
+                    const response = await fetch(`${API_BASE_URL}/api/admin/profile`, {
                         method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json',
@@ -1596,7 +1599,7 @@
                 
                 // Fetch issue details from backend
                 const adminToken = localStorage.getItem('admin_token');
-                const response = await fetch(`http://localhost:5000/api/admin/issues/${issueId}`, {
+                const response = await fetch(`${API_BASE_URL}/api/admin/issues/${issueId}`, {
                     headers: {
                         'Authorization': `Bearer ${adminToken}`
                     }
@@ -1656,7 +1659,7 @@
             
             if (issue.image_url) {
                 photoSection.style.display = 'block';
-                issuePhoto.src = `http://localhost:5000${issue.image_url}`;
+                issuePhoto.src = `${API_BASE_URL}${issue.image_url}`;
                 issuePhoto.onclick = () => window.open(issuePhoto.src, '_blank');
             } else {
                 photoSection.style.display = 'none';
@@ -1744,7 +1747,7 @@
                 
                 // Send update to backend
                 const adminToken = localStorage.getItem('admin_token');
-                const response = await fetch(`http://localhost:5000/api/admin/issues/${currentIssueId}/update`, {
+                const response = await fetch(`${API_BASE_URL}/api/admin/issues/${currentIssueId}/update`, {
                     method: 'PUT',
                     headers: {
                         'Authorization': `Bearer ${adminToken}`,
