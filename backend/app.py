@@ -40,16 +40,10 @@ def send_verification_email(email, code, username):
         smtp_password = os.environ.get('SMTP_PASSWORD')
         from_email = os.environ.get('FROM_EMAIL', smtp_username)
         
-        # Strip spaces from App Password (Gmail App Passwords sometimes have spaces that need removal)
-        if smtp_password:
-            smtp_password = smtp_password.replace(' ', '')
-        
         print(f"SMTP Config - Server: {smtp_server}, Port: {smtp_port}")
         print(f"SMTP Username: {smtp_username}")
         print(f"From Email: {from_email}")
         print(f"SMTP Password configured: {'Yes' if smtp_password else 'No'}")
-        if smtp_password:
-            print(f"SMTP Password length: {len(smtp_password)} characters (should be 16 for Gmail App Password)")
         
         if not smtp_username or not smtp_password:
             print("SMTP credentials not configured. Email not sent.")
@@ -98,30 +92,6 @@ def send_verification_email(email, code, username):
         print(f"Verification email sent successfully to {email}")
         return True
         
-    except smtplib.SMTPAuthenticationError as e:
-        print(f"ERROR sending email: SMTP Authentication failed")
-        print(f"Details: {e}")
-        print("\n" + "="*60)
-        print("GMAIL SMTP AUTHENTICATION ERROR")
-        print("="*60)
-        print("Gmail is rejecting your credentials. Common causes:")
-        print("1. Using regular password instead of App Password")
-        print("2. App Password is incorrect or expired")
-        print("3. 2-Factor Authentication is not enabled")
-        print("4. App Password was generated for wrong app (should be 'Mail')")
-        print("\nTo fix this:")
-        print("1. Go to https://myaccount.google.com/security")
-        print("2. Enable 2-Factor Authentication (REQUIRED for App Passwords)")
-        print("3. Go to https://myaccount.google.com/apppasswords")
-        print("4. Select 'Mail' as the app and 'Other (Custom name)' as device")
-        print("5. Enter 'CivicFix' as the name and click Generate")
-        print("6. Copy the 16-character password (spaces will be auto-removed)")
-        print("7. Update SMTP_PASSWORD in your .env file")
-        print("8. Restart your Flask server")
-        print("="*60)
-        import traceback
-        traceback.print_exc()
-        return False
     except Exception as e:
         print(f"ERROR sending email: {e}")
         import traceback
@@ -174,11 +144,6 @@ def create_app():
     def index():
         """Serve index.html for root path"""
         return send_from_directory(app.static_folder, 'index.html')
-    
-    @app.route('/<path:filename>')
-    def serve_static(filename):
-        """Serve static files (HTML, CSS, JS)"""
-        return send_from_directory(app.static_folder, filename)
     
     @app.route('/api/status')
     def api_status():
@@ -287,20 +252,11 @@ def create_app():
             db.session.commit()
             print("User saved to database successfully")
             
-            # Send verification email
-            print("Attempting to send verification email...")
-            email_sent = send_verification_email(email, verification_code, username)
-            print(f"Email sent result: {email_sent}")
+            # SMTP is disabled - Supabase handles email confirmation
+            print("SMTP disabled - Supabase will send confirmation email")
+            print("Verification code stored in database for backup verification")
             
-            if email_sent:
-                print("Verification email sent successfully")
-                return jsonify({'message': 'Verification code sent successfully'})
-            else:
-                print("Failed to send verification email")
-                return jsonify({
-                    'error': 'Failed to send verification email. Please check your SMTP configuration.',
-                    'details': 'This is usually caused by incorrect Gmail credentials. Gmail requires an App Password, not your regular password. Check the server logs for more details.'
-                }), 500
+            return jsonify({'message': 'Account created! Check your email from Supabase to confirm signup.'})
                 
         except Exception as e:
             db.session.rollback()
@@ -379,7 +335,7 @@ def create_app():
     
     @app.route('/api/auth/resend-verification', methods=['POST'])
     def resend_verification():
-        """Resend verification code"""
+        """Resend verification code (SMTP disabled - Supabase handles emails)"""
         try:
             data = request.get_json()
             email = data.get('email')
@@ -395,25 +351,11 @@ def create_app():
             if user.is_email_verified:
                 return jsonify({'error': 'Email is already verified'}), 400
             
-            # Generate new verification code
-            verification_code = generate_verification_code()
-            expires_at = datetime.utcnow() + timedelta(minutes=15)
-            
-            user.verification_code = verification_code
-            user.verification_code_expires = expires_at
-            db.session.commit()
-            
-            # Send verification email
-            email_sent = send_verification_email(email, verification_code, user.username)
-            
-            if email_sent:
-                return jsonify({'message': 'New verification code sent successfully'})
-            else:
-                return jsonify({'error': 'Failed to send verification email. Please try again.'}), 500
-                
+            # SMTP is disabled - Supabase handles email resending
+            print(f"Resend verification requested for {email} - SMTP disabled, Supabase handles emails")
+            return jsonify({'message': 'Check your email from Supabase for the confirmation link.'})
         except Exception as e:
-            db.session.rollback()
-            print(f"Error resending verification: {e}")
+            print(f"Error in resend_verification: {e}")
             return jsonify({'error': 'Server error. Please try again.'}), 500
     
     # Authentication routes (handled by Supabase on frontend)
@@ -428,7 +370,7 @@ def create_app():
     
     @app.route('/api/auth/check-verification', methods=['POST'])
     def check_verification():
-        """Check if user's email is verified (checks both Supabase and our database)"""
+        """Check if user's email is verified in our system"""
         try:
             data = request.get_json()
             email = data.get('email')
@@ -440,31 +382,42 @@ def create_app():
             if not user:
                 return jsonify({'is_verified': False}), 200
             
-            # Check Supabase's email confirmation status
-            try:
-                result = db.session.execute(
-                    text("SELECT email_confirmed_at FROM auth.users WHERE email = :email"),
-                    {"email": email}
-                )
-                auth_user = result.fetchone()
-                
-                if auth_user and auth_user[0]:  # email_confirmed_at is not NULL
-                    # Supabase email is confirmed, sync to our database
-                    if not user.is_email_verified:
-                        user.is_email_verified = True
-                        db.session.commit()
-                        print(f"Synced email verification status for {email}")
-                    return jsonify({'is_verified': True}), 200
-            except Exception as e:
-                print(f"Error checking Supabase auth status: {e}")
-                # Fall back to our database status if Supabase check fails
-                pass
-            
-            # Return our database status
             return jsonify({'is_verified': user.is_email_verified}), 200
             
         except Exception as e:
             print(f"Error checking verification: {e}")
+            return jsonify({'error': 'Server error'}), 500
+    
+    @app.route('/api/auth/mark-verified', methods=['POST'])
+    def mark_verified():
+        """Mark user's email as verified (called after Supabase confirms email)"""
+        try:
+            data = request.get_json()
+            email = data.get('email')
+            
+            if not email:
+                return jsonify({'error': 'Email is required'}), 400
+            
+            print(f"[mark-verified] Marking email as verified: {email}")
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                print(f"[mark-verified] User not found: {email}")
+                return jsonify({'error': 'User not found'}), 404
+            
+            # Mark email as verified
+            user.is_email_verified = True
+            user.verification_code = None
+            user.verification_code_expires = None
+            db.session.commit()
+            
+            print(f"[mark-verified] Email marked as verified: {email}")
+            return jsonify({'message': 'Email marked as verified', 'is_verified': True}), 200
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"[mark-verified] Error: {e}")
+            import traceback
+            traceback.print_exc()
             return jsonify({'error': 'Server error'}), 500
     
     @app.route('/api/auth/backend-login', methods=['POST'])
@@ -517,56 +470,64 @@ def create_app():
     @optional_auth
     def get_issues():
         """Get all issues with optional filtering and search"""
-        page = request.args.get('page', 1, type=int)
-        per_page = request.args.get('per_page', 10, type=int)
-        status = request.args.get('status')
-        category = request.args.get('category')
-        province = request.args.get('province')
-        district = request.args.get('district')
-        sector = request.args.get('sector')
-        search = request.args.get('search')
-        
-        query = Issue.query
-        
-        if status:
-            query = query.filter(Issue.status == status)
-        if category:
-            query = query.filter(Issue.category == category)
-        if province:
-            # Filter by issue province
-            query = query.filter(Issue.province == province)
-        if district:
-            # Filter by issue district
-            query = query.filter(Issue.district == district)
-        if sector:
-            # Filter by issue sector
-            query = query.filter(Issue.sector == sector)
-        if search:
-            # Search in title, description, location fields
-            search_term = f"%{search}%"
-            query = query.filter(
-                db.or_(
-                    Issue.title.ilike(search_term),
-                    Issue.description.ilike(search_term),
-                    Issue.street_address.ilike(search_term),
-                    Issue.landmark_reference.ilike(search_term),
-                    Issue.detailed_description.ilike(search_term),
-                    Issue.province.ilike(search_term),
-                    Issue.district.ilike(search_term),
-                    Issue.sector.ilike(search_term)
+        try:
+            print(f"[GET /api/issues] Request received with args: {request.args}")
+            page = request.args.get('page', 1, type=int)
+            per_page = request.args.get('per_page', 10, type=int)
+            status = request.args.get('status')
+            category = request.args.get('category')
+            province = request.args.get('province')
+            district = request.args.get('district')
+            sector = request.args.get('sector')
+            search = request.args.get('search')
+            
+            query = Issue.query
+            
+            if status:
+                query = query.filter(Issue.status == status)
+            if category:
+                query = query.filter(Issue.category == category)
+            if province:
+                # Filter by issue province
+                query = query.filter(Issue.province == province)
+            if district:
+                # Filter by issue district
+                query = query.filter(Issue.district == district)
+            if sector:
+                # Filter by issue sector
+                query = query.filter(Issue.sector == sector)
+            if search:
+                # Search in title, description, location fields
+                search_term = f"%{search}%"
+                query = query.filter(
+                    db.or_(
+                        Issue.title.ilike(search_term),
+                        Issue.description.ilike(search_term),
+                        Issue.street_address.ilike(search_term),
+                        Issue.landmark_reference.ilike(search_term),
+                        Issue.detailed_description.ilike(search_term),
+                        Issue.province.ilike(search_term),
+                        Issue.district.ilike(search_term),
+                        Issue.sector.ilike(search_term)
+                    )
                 )
+            
+            issues = query.order_by(Issue.created_at.desc()).paginate(
+                page=page, per_page=per_page, error_out=False
             )
-        
-        issues = query.order_by(Issue.created_at.desc()).paginate(
-            page=page, per_page=per_page, error_out=False
-        )
-        
-        return jsonify({
-            'issues': [issue.to_dict() for issue in issues.items],
-            'total': issues.total,
-            'pages': issues.pages,
-            'current_page': page
-        })
+            
+            print(f"[GET /api/issues] Returning {len(issues.items)} issues")
+            return jsonify({
+                'issues': [issue.to_dict() for issue in issues.items],
+                'total': issues.total,
+                'pages': issues.pages,
+                'current_page': page
+            })
+        except Exception as e:
+            print(f"[GET /api/issues] ERROR: {e}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': str(e)}), 500
     
     @app.route('/api/issues/<int:issue_id>', methods=['GET'])
     @optional_auth
@@ -1822,18 +1783,27 @@ def create_app():
             print(f"Profile update error: {e}")
             return jsonify({'error': str(e)}), 500
     
+    # Register catch-all route LAST using add_url_rule to ensure it has lowest priority
+    def serve_static(filename):
+        """Serve static files (HTML, CSS, JS) and SPA routing"""
+        try:
+            return send_from_directory(app.static_folder, filename)
+        except:
+            # If file not found, serve index.html for SPA routing
+            try:
+                return send_from_directory(app.static_folder, 'index.html')
+            except:
+                return '', 404
+    
+    app.add_url_rule('/<path:filename>', 'serve_static', serve_static, methods=['GET'])
+    
     return app
 
-# Create app at module level for gunicorn
-app = create_app()
-with app.app_context():
-    try:
-        db.create_all()
-    except Exception as e:
-        print(f"Warning: Could not create database tables: {e}")
-        print("Continuing startup anyway...")
-
 if __name__ == '__main__':
+    app = create_app()
+    with app.app_context():
+        db.create_all()
+    
     print("Starting CivicFix Server (Flask + SocketIO)")
     print("Server: http://localhost:5000")
     print("Admin: http://localhost:5500/admin-request-code.html")
@@ -1846,7 +1816,6 @@ if __name__ == '__main__':
         socketio.run(
             app,
             debug=app.config['DEBUG'],
-            host='0.0.0.0',
-            port=int(os.environ.get('PORT', 5000)),
-            allow_unsafe_werkzeug=True
+            host='127.0.0.1',
+            port=5000
         )

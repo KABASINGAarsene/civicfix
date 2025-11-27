@@ -70,19 +70,6 @@ def token_required(f):
             # Use username from metadata, fallback to email prefix if not available
             username = user_data.user_metadata.get('username', user_data.email.split('@')[0])
             
-            # Check if email is confirmed in Supabase
-            is_verified = False
-            try:
-                from sqlalchemy import text
-                result = db.session.execute(
-                    text("SELECT email_confirmed_at FROM auth.users WHERE id = :user_id"),
-                    {"user_id": user_data.id}
-                )
-                auth_user = result.fetchone()
-                is_verified = auth_user and auth_user[0] is not None
-            except Exception as e:
-                print(f"Error checking email confirmation: {e}")
-            
             user = User(
                 id=user_data.id,
                 email=user_data.email,
@@ -90,37 +77,16 @@ def token_required(f):
                 phone=user_data.user_metadata.get('phone', ''),
                 province=user_data.user_metadata.get('province', ''),
                 district=user_data.user_metadata.get('district', ''),
-                sector=user_data.user_metadata.get('sector', ''),
-                is_email_verified=is_verified
+                sector=user_data.user_metadata.get('sector', '')
             )
             db.session.add(user)
             db.session.commit()
         else:
-            # Sync email verification status from Supabase
-            email_verified_synced = False
-            try:
-                from sqlalchemy import text
-                result = db.session.execute(
-                    text("SELECT email_confirmed_at FROM auth.users WHERE id = :user_id"),
-                    {"user_id": user_data.id}
-                )
-                auth_user = result.fetchone()
-                if auth_user and auth_user[0] and not user.is_email_verified:
-                    # Supabase email is confirmed, sync to our database
-                    user.is_email_verified = True
-                    email_verified_synced = True
-                    print(f"Synced email verification status for {user.email}")
-            except Exception as e:
-                print(f"Error syncing email confirmation: {e}")
-            
             # Update existing user with metadata if username looks like email prefix
             metadata_username = user_data.user_metadata.get('username')
-            needs_commit = email_verified_synced
-            
             if metadata_username and user.username == user.email.split('@')[0]:
                 # This user likely has the old email-based username, update it
                 user.username = metadata_username
-                needs_commit = True
                 
                 # Also update other fields if they're empty
                 if not user.phone and user_data.user_metadata.get('phone'):
@@ -131,9 +97,7 @@ def token_required(f):
                     user.district = user_data.user_metadata.get('district')
                 if not user.sector and user_data.user_metadata.get('sector'):
                     user.sector = user_data.user_metadata.get('sector')
-            
-            # Commit if we made any changes
-            if needs_commit:
+                
                 db.session.commit()
         
         # Make user available in the route
