@@ -36,8 +36,9 @@ instance/
 
 # Uploads
 backend/uploads/
-=2.9.0
-=2.10.1
+
+# Development scripts
+backend/scripts/
 
 # IDE
 .vscode/
