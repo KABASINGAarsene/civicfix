@@ -1,5 +1,5 @@
 // API configuration
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = 'https://civicfix-cwz8.onrender.com';
 
 // Supabase configuration - You'll need to replace these with your actual values
 const SUPABASE_URL = 'https://ozaaasesvvjphzohfxoo.supabase.co';
