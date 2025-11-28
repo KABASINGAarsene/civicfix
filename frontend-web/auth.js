@@ -106,12 +106,12 @@ class AuthManager {
 
     async signUp(email, password, username, userData = {}) {
         try {
-            // First, register with Supabase but disable email confirmation
+            // First, register with Supabase with proper email confirmation redirect
             const { data, error } = await supabase.auth.signUp({
                 email: email,
                 password: password,
                 options: {
-                    emailRedirectTo: null, // Disable email confirmation
+                    emailRedirectTo: `${API_BASE_URL}/login.html`, // Redirect to login after email confirmation
                     data: {
                         username: username,
                         phone: userData.phone || '',
