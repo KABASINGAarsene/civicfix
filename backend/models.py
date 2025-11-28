@@ -80,7 +80,9 @@ class Issue(db.Model):
     
     # Relationships
     votes = db.relationship('Vote', backref='issue', lazy=True, cascade='all, delete-orphan')
-    notifications = db.relationship('Notification', backref='issue', lazy=True)
+    notifications = db.relationship('Notification', backref='issue', lazy=True, cascade='all, delete-orphan')
+    status_history = db.relationship('StatusHistory', backref='issue', lazy=True, cascade='all, delete-orphan')
+    admin_comments = db.relationship('AdminComment', backref='issue', lazy=True, cascade='all, delete-orphan')
     
     # Indexes for performance
     __table_args__ = (
@@ -202,9 +204,6 @@ class StatusHistory(db.Model):
     admin_comment = db.Column(db.Text, nullable=True)  # Admin's explanation of the action
     changed_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Relationship
-    issue = db.relationship('Issue', backref=db.backref('status_history', lazy=True, order_by='StatusHistory.changed_at.desc()'))
-    
     def to_dict(self):
         return {
             'id': self.id,
@@ -225,9 +224,6 @@ class AdminComment(db.Model):
     admin_name = db.Column(db.String(100), nullable=False)  # Name of admin who made comment
     comment = db.Column(db.Text, nullable=False)  # The actual comment/note
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Relationship
-    issue = db.relationship('Issue', backref=db.backref('admin_comments', lazy=True, order_by='AdminComment.created_at.desc()'))
     
     def to_dict(self):
         return {
