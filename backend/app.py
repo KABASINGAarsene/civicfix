@@ -1311,61 +1311,61 @@ def create_app():
         db.session.rollback()
         return jsonify({'error': 'Internal server error'}), 500
     
-    # WebSocket event handlers
-    @socketio.on('connect')
-    def handle_connect():
-        """Handle client connection"""
-        print(f"Client connected: {request.sid}")
-        emit('connected', {'message': 'Connected to CivicFix real-time updates'})
-    
-    @socketio.on('disconnect')
-    def handle_disconnect():
-        """Handle client disconnection"""
-        print(f"Client disconnected: {request.sid}")
-    
-    @socketio.on('join_user_room')
-    def handle_join_user_room(data):
-        """Join user-specific room for notifications"""
-        try:
-            user_id = data.get('user_id')
-            if user_id:
-                join_room(f"user_{user_id}")
-                emit('joined_room', {'room': f"user_{user_id}"})
-                print(f"User {user_id} joined their notification room")
-        except Exception as e:
-            print(f"Error joining user room: {e}")
-    
-    @socketio.on('join_admin_room')
-    def handle_join_admin_room(data):
-        """Join admin room for admin notifications"""
-        try:
-            is_admin = data.get('is_admin', False)
-            if is_admin:
-                join_room('admins')
-                emit('joined_room', {'room': 'admins'})
-                print("Admin user joined admin room")
-        except Exception as e:
-            print(f"Error joining admin room: {e}")
-    
-    @socketio.on('leave_user_room')
-    def handle_leave_user_room(data):
-        """Leave user-specific room"""
-        try:
-            user_id = data.get('user_id')
-            if user_id:
-                leave_room(f"user_{user_id}")
-                print(f"User {user_id} left their notification room")
-        except Exception as e:
-            print(f"Error leaving user room: {e}")
-    
-    @socketio.on('leave_admin_room')
-    def handle_leave_admin_room():
-        """Leave admin room"""
-        try:
-            leave_room('admins')
-            print("User left admin room")
-        except Exception as e:
-            print(f"Error leaving admin room: {e}")
+    # WebSocket event handlers - DISABLED (Socket.IO disabled for production)
+    # @socketio.on('connect')
+    # def handle_connect():
+    #     """Handle client connection"""
+    #     print(f"Client connected: {request.sid}")
+    #     emit('connected', {'message': 'Connected to CivicFix real-time updates'})
+    # 
+    # @socketio.on('disconnect')
+    # def handle_disconnect():
+    #     """Handle client disconnection"""
+    #     print(f"Client disconnected: {request.sid}")
+    # 
+    # @socketio.on('join_user_room')
+    # def handle_join_user_room(data):
+    #     """Join user-specific room for notifications"""
+    #     try:
+    #         user_id = data.get('user_id')
+    #         if user_id:
+    #             join_room(f"user_{user_id}")
+    #             emit('joined_room', {'room': f"user_{user_id}"})
+    #             print(f"User {user_id} joined their notification room")
+    #     except Exception as e:
+    #         print(f"Error joining user room: {e}")
+    # 
+    # @socketio.on('join_admin_room')
+    # def handle_join_admin_room(data):
+    #     """Join admin room for admin notifications"""
+    #     try:
+    #         is_admin = data.get('is_admin', False)
+    #         if is_admin:
+    #             join_room('admins')
+    #             emit('joined_room', {'room': 'admins'})
+    #             print("Admin user joined admin room")
+    #     except Exception as e:
+    #         print(f"Error joining admin room: {e}")
+    # 
+    # @socketio.on('leave_user_room')
+    # def handle_leave_user_room(data):
+    #     """Leave user-specific room"""
+    #     try:
+    #         user_id = data.get('user_id')
+    #         if user_id:
+    #             leave_room(f"user_{user_id}")
+    #             print(f"User {user_id} left their notification room")
+    #     except Exception as e:
+    #         print(f"Error leaving user room: {e}")
+    # 
+    # @socketio.on('leave_admin_room')
+    # def handle_leave_admin_room():
+    #     """Leave admin room"""
+    #     try:
+    #         leave_room('admins')
+    #         print("User left admin room")
+    #     except Exception as e:
+    #         print(f"Error leaving admin room: {e}")
     
     # Admin Code Request Route
     @app.route('/api/admin/request-code', methods=['POST'])
