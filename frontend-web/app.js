@@ -163,8 +163,11 @@ class CivicFixApp {
 
     createIssueCard(issue) {
         const statusClass = issue.status.toLowerCase().replace(/\s+/g, '-');
-        const imageHtml = issue.image_url ? 
-            `<img src="${API_BASE_URL}${issue.image_url}" alt="Issue photo" class="issue-image">` : '';
+        // Use full URL for Supabase Storage images, prepend API_BASE_URL for local uploads
+        const imageSrc = issue.image_url ? 
+            (issue.image_url.startsWith('http') ? issue.image_url : `${API_BASE_URL}${issue.image_url}`) : '';
+        const imageHtml = imageSrc ? 
+            `<img src="${imageSrc}" alt="Issue photo" class="issue-image">` : '';
         
         // Format location information
         const locationInfo = this.formatLocationInfo(issue);
