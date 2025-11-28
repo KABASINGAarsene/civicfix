@@ -36,7 +36,7 @@ class CivicFixApp {
         
         this.autoRefreshInterval = setInterval(() => {
             console.log('Auto-refreshing citizen issues...');
-            this.loadIssues(this.currentPage);
+            this.loadIssues(this.currentPage, true); // Pass true to indicate auto-refresh
         }, this.refreshIntervalSeconds * 1000);
     }
 
@@ -97,9 +97,12 @@ class CivicFixApp {
         }
     }
 
-    async loadIssues(page = 1) {
+    async loadIssues(page = 1, isAutoRefresh = false) {
         try {
-            this.showLoading(true);
+            // Only show loading indicator for manual loads, not auto-refresh
+            if (!isAutoRefresh) {
+                this.showLoading(true);
+            }
             
             const params = new URLSearchParams({
                 page: page.toString(),
@@ -134,7 +137,16 @@ class CivicFixApp {
             }
 
             const data = await response.json();
-            this.issues = data.issues;
+            const newIssues = data.issues;
+            const oldIssues = this.issues;
+            
+            // For auto-refresh, check if data actually changed before updating
+            if (isAutoRefresh && JSON.stringify(oldIssues) === JSON.stringify(newIssues)) {
+                console.log('No changes detected in auto-refresh, skipping update');
+                return;
+            }
+            
+            this.issues = newIssues;
             this.currentPage = data.current_page;
             this.totalPages = data.pages;
 
@@ -143,9 +155,13 @@ class CivicFixApp {
 
         } catch (error) {
             console.error('Error loading issues:', error);
-            showNotification('Error loading issues. Please try again.', 'error');
+            if (!isAutoRefresh) {
+                showNotification('Error loading issues. Please try again.', 'error');
+            }
         } finally {
-            this.showLoading(false);
+            if (!isAutoRefresh) {
+                this.showLoading(false);
+            }
         }
     }
 
