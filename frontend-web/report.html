@@ -259,19 +259,36 @@
             });
 
             function handleFileSelect(file) {
+                const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16MB
+                const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif'];
+                
+                // Validate file type
+                if (!file.type.startsWith('image/')) {
+                    showNotification('❌ Invalid file type. Please select an image file (JPG, PNG, or GIF).', 'error');
+                    fileInput.value = '';
+                    filePreview.innerHTML = '';
+                    return;
+                }
+                
+                // Validate file size
+                if (file.size > MAX_FILE_SIZE) {
+                    const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                    showNotification(`❌ File too large (${sizeMB}MB). Maximum size is 16MB.`, 'error');
+                    fileInput.value = '';
+                    filePreview.innerHTML = '';
+                    return;
+                }
+                
+                // File is valid - show preview
                 if (file && file.type.startsWith('image/')) {
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         filePreview.innerHTML = `
                             <img src="${e.target.result}" alt="Preview" style="max-width: 200px; max-height: 200px; border-radius: 4px;">
-                            <p>Selected: ${file.name}</p>
+                            <p>Selected: ${file.name} (${(file.size / 1024).toFixed(2)}KB)</p>
                         `;
                     };
                     reader.readAsDataURL(file);
-                } else {
-                    showNotification('Please select a valid image file.', 'error');
-                    fileInput.value = '';
-                    filePreview.innerHTML = '';
                 }
             }
 
@@ -409,7 +426,18 @@
                         message: error.message,
                         stack: error.stack
                     });
-                    showError('Error submitting report. Please check your connection and try again.');
+                    
+                    // Provide specific error messages
+                    let errorMessage = 'Error submitting report. Please check your connection and try again.';
+                    if (error.message.includes('413')) {
+                        errorMessage = '❌ File too large. Please select an image smaller than 16MB.';
+                    } else if (error.message.includes('415')) {
+                        errorMessage = '❌ Invalid file type. Please select a JPG, PNG, or GIF image.';
+                    } else if (error.message.includes('Network')) {
+                        errorMessage = '❌ Network error. Please check your internet connection.';
+                    }
+                    
+                    showError(errorMessage);
                 } finally {
                     submitBtn.disabled = false;
                     submitBtn.textContent = isEditing ? 'Update Issue' : 'Submit Issue Report';
