@@ -474,11 +474,15 @@
                         <span class="status-badge status-${issue.status.toLowerCase().replace(' ', '-')}">${issue.status}</span>
                     </div>
                     <p class="issue-description">${issue.description}</p>
-                    ${issue.image_url ? `
+                    ${issue.image_url ? (() => {
+                        const imageSrc = issue.image_url.startsWith('http') ? 
+                            issue.image_url : `${API_BASE_URL}${issue.image_url}`;
+                        return `
                         <div class="issue-image-container">
-                            <img src="${API_BASE_URL}${issue.image_url}" alt="Issue photo" class="issue-image-profile" onclick="openImageModal('${API_BASE_URL}${issue.image_url}')">
+                            <img src="${imageSrc}" alt="Issue photo" class="issue-image-profile" onclick="openImageModal('${imageSrc}')">
                         </div>
-                    ` : ''}
+                    `;
+                    })() : ''}
                     <div class="issue-location">
                         ${issue.street_address ? `<div><strong>Address:</strong> ${issue.street_address}</div>` : ''}
                         ${issue.landmark_reference ? `<div><strong>Near:</strong> ${issue.landmark_reference}</div>` : ''}
