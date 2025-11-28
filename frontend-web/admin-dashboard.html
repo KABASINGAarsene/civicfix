@@ -1712,7 +1712,10 @@
             
             if (issue.image_url) {
                 photoSection.style.display = 'block';
-                issuePhoto.src = `${API_BASE_URL}${issue.image_url}`;
+                // Use full URL for Supabase Storage images, prepend API_BASE_URL for local uploads
+                const imageSrc = issue.image_url.startsWith('http') ? 
+                    issue.image_url : `${API_BASE_URL}${issue.image_url}`;
+                issuePhoto.src = imageSrc;
                 issuePhoto.onclick = () => window.open(issuePhoto.src, '_blank');
             } else {
                 photoSection.style.display = 'none';
