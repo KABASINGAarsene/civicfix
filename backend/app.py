@@ -704,6 +704,24 @@ def create_app():
             if issue.user_id != request.current_user.id:
                 return jsonify({'error': 'You can only delete your own issues'}), 403
             
+            # Delete image from Supabase Storage if it exists and is a Supabase URL
+            if issue.image_url:
+                try:
+                    # Only delete if it's a Supabase Storage URL (starts with https://)
+                    if issue.image_url.startswith('https://'):
+                        # Extract the file path from the Supabase URL
+                        # URL format: https://ozaaasesvvjphzohfxoo.supabase.co/storage/v1/object/public/issue-images/filename
+                        # We need to extract just the filename
+                        url_parts = issue.image_url.split('/issue-images/')
+                        if len(url_parts) > 1:
+                            filename = url_parts[1]
+                            supabase = get_supabase_service_client()
+                            supabase.storage.from_('issue-images').remove([filename])
+                            print(f"[DELETE ISSUE] Deleted image from Supabase: {filename}")
+                except Exception as img_error:
+                    # Log the error but don't fail the entire delete operation
+                    print(f"[DELETE ISSUE] Warning: Could not delete image from Supabase: {str(img_error)}")
+            
             # Delete associated votes first
             Vote.query.filter_by(issue_id=issue_id).delete()
             
@@ -718,6 +736,7 @@ def create_app():
             
         except Exception as e:
             db.session.rollback()
+            print(f"[DELETE ISSUE] Error: {str(e)}")
             return jsonify({'error': str(e)}), 500
     
     @app.route('/api/issues/<int:issue_id>', methods=['PUT'])
