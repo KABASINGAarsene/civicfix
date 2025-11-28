@@ -1,4 +1,8 @@
 // WebSocket real-time notifications for CivicFix
+
+// API configuration - define here to ensure it's available
+const API_BASE_URL = window.API_BASE_URL || 'https://civicfix-cwz8.onrender.com';
+
 class WebSocketManager {
     constructor() {
         this.socket = null;

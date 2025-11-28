@@ -1,5 +1,6 @@
 // API configuration
 const API_BASE_URL = 'https://civicfix-cwz8.onrender.com';
+window.API_BASE_URL = API_BASE_URL; // Make available globally
 
 // Supabase configuration - You'll need to replace these with your actual values
 const SUPABASE_URL = 'https://ozaaasesvvjphzohfxoo.supabase.co';
