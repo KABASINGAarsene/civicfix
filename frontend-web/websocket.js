@@ -45,7 +45,7 @@ class WebSocketManager {
             }
 
             this.socket = io(API_BASE_URL, {
-                transports: ['websocket', 'polling'],
+                transports: ['polling'],  // Use polling only - more reliable on production
                 timeout: 20000,
                 forceNew: false, // Allow connection reuse
                 query: {
