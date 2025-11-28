@@ -1066,7 +1066,7 @@
                 this.adminDistrict = '';
                 this.autoRefreshInterval = null;
                 this.autoRefreshEnabled = true;
-                this.refreshIntervalSeconds = 30; // Auto-refresh every 30 seconds
+                this.refreshIntervalSeconds = 10; // Auto-refresh every 10 seconds
                 // Admin-side filters for status, category and vote ranges
                 this.filters = { status: '', category: '', votes: '' };
                 
@@ -1512,7 +1512,7 @@
                 
                 if (this.autoRefreshEnabled) {
                     this.startAutoRefresh();
-                    showSuccess('Auto-refresh enabled - Dashboard will update every 30 seconds');
+                    showSuccess('Auto-refresh enabled - Dashboard will update every 10 seconds');
                     if (toggleButton) {
                         toggleButton.innerHTML = 'Auto-Refresh ON';
                         toggleButton.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';

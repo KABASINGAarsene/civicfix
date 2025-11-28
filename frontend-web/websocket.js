@@ -1,9 +1,7 @@
 // WebSocket real-time notifications for CivicFix
 
-// API configuration - use existing or define if not available
-if (typeof API_BASE_URL === 'undefined') {
-    var API_BASE_URL = window.API_BASE_URL || 'https://civicfix-cwz8.onrender.com';
-}
+// API configuration is defined in auth.js and available as window.API_BASE_URL
+// No need to redeclare it here
 
 class WebSocketManager {
     constructor() {
