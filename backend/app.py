@@ -1616,7 +1616,7 @@ def create_app():
             # Create admin user in our database
             admin_user = User(
                 id=str(uuid.uuid4()),  # Generate new UUID
-                username=data['email'].split('@')[0],
+                username=data['full_name'],  # Use the full name provided by admin
                 email=data['email'],
                 password_hash=password_hash.decode('utf-8'),  # Store as string
                 is_admin=True,
