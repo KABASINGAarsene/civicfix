@@ -113,9 +113,11 @@ def create_app():
     socketio = SocketIO(
         app, 
         cors_allowed_origins="*",
-        async_mode='gevent',
-        ping_timeout=60,
-        ping_interval=25
+        async_mode='threading',
+        ping_timeout=120,
+        ping_interval=25,
+        engineio_logger=False,
+        socketio_logger=False
     )
     
     # Configure CORS - Allow all origins for development
