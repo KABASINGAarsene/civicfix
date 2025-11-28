@@ -16,11 +16,13 @@ class WebSocketManager {
     }
 
     init() {
-        this.loadSocketIO().then(() => {
-            this.connect();
-        }).catch(error => {
-            console.error('Failed to load Socket.IO:', error);
-        });
+        // Socket.IO disabled - using HTTP polling instead
+        console.log('WebSocket disabled - using HTTP polling for real-time updates');
+        // this.loadSocketIO().then(() => {
+        //     this.connect();
+        // }).catch(error => {
+        //     console.error('Failed to load Socket.IO:', error);
+        // });
     }
 
     loadSocketIO() {

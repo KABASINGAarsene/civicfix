@@ -109,16 +109,18 @@ def create_app():
     migrate = Migrate(app, db)
     
     # Initialize Socket.IO on the same app/port to avoid conflicts
+    # Disabled for production - using HTTP polling instead to avoid worker timeouts
     global socketio
-    socketio = SocketIO(
-        app, 
-        cors_allowed_origins="*",
-        async_mode='threading',
-        ping_timeout=120,
-        ping_interval=25,
-        engineio_logger=False,
-        socketio_logger=False
-    )
+    socketio = None
+    # socketio = SocketIO(
+    #     app, 
+    #     cors_allowed_origins="*",
+    #     async_mode='threading',
+    #     ping_timeout=120,
+    #     ping_interval=25,
+    #     engineio_logger=False,
+    #     socketio_logger=False
+    # )
     
     # Configure CORS - Allow all origins for development
     CORS(app, origins="*", allow_headers=["Content-Type", "Authorization"], methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
