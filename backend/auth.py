@@ -16,6 +16,8 @@ def get_supabase_service_client():
     key = current_app.config['SUPABASE_SERVICE_ROLE_KEY']
     if not key:
         raise ValueError("SUPABASE_SERVICE_ROLE_KEY not configured")
+    print(f"[SUPABASE] Using service role key: {key[:20]}..." if key else "[SUPABASE] No service role key")
+    print(f"[SUPABASE] URL: {url}")
     return create_client(url, key)
 
 def verify_supabase_token(token):
