@@ -149,6 +149,35 @@ def create_app():
         except Exception as e:
             print(f"Error resizing image: {e}")
     
+    def upload_to_supabase_storage(file, bucket_name='issue-images'):
+        """Upload image to Supabase Storage and return public URL"""
+        try:
+            supabase = get_supabase_client()
+            
+            # Generate unique filename
+            filename = secure_filename(file.filename)
+            filename = f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}_{filename}"
+            
+            # Read file content
+            file_content = file.read()
+            
+            # Upload to Supabase Storage
+            response = supabase.storage.from_(bucket_name).upload(
+                path=filename,
+                file=file_content,
+                file_options={"content-type": file.content_type}
+            )
+            
+            # Get public URL
+            public_url = supabase.storage.from_(bucket_name).get_public_url(filename)
+            
+            print(f"Image uploaded to Supabase: {public_url}")
+            return public_url
+            
+        except Exception as e:
+            print(f"Error uploading to Supabase Storage: {e}")
+            return None
+    
     # Routes
     @app.route('/')
     def index():
@@ -567,20 +596,16 @@ def create_app():
                 if not data.get(field):
                     return jsonify({'error': f'{field} is required'}), 400
             
-            # Handle image upload
+            # Handle image upload to Supabase Storage
             image_url = None
             if 'image' in request.files:
                 file = request.files['image']
                 if file and file.filename and allowed_file(file.filename):
-                    filename = secure_filename(file.filename)
-                    # Add timestamp to avoid conflicts
-                    filename = f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{filename}"
-                    file_path = os.path.join(upload_dir, filename)
-                    file.save(file_path)
-                    
-                    # Resize image
-                    resize_image(file_path)
-                    image_url = f"/uploads/{filename}"
+                    # Upload to Supabase Storage
+                    image_url = upload_to_supabase_storage(file)
+                    if not image_url:
+                        print("Warning: Image upload to Supabase failed, continuing without image")
+                        image_url = None
             
             # Verify user is authenticated
             if not hasattr(request, 'current_user') or not request.current_user:
@@ -700,27 +725,13 @@ def create_app():
             # Handle image upload if provided
             if 'image' in request.files:
                 file = request.files['image']
-                if file and file.filename:
-                    # Delete old image if exists
-                    if issue.image_url:
-                        old_image_path = os.path.join(upload_dir, os.path.basename(issue.image_url))
-                        if os.path.exists(old_image_path):
-                            os.remove(old_image_path)
-                    
-                    # Save new image
-                    filename = secure_filename(file.filename)
-                    timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
-                    filename = f"{timestamp}_{filename}"
-                    
-                    file_path = os.path.join(upload_dir, filename)
-                    file.save(file_path)
-                    
-                    # Resize image
-                    with Image.open(file_path) as img:
-                        img.thumbnail((800, 600), Image.Resampling.LANCZOS)
-                        img.save(file_path, optimize=True, quality=85)
-                    
-                    issue.image_url = f"/uploads/{filename}"
+                if file and file.filename and allowed_file(file.filename):
+                    # Upload new image to Supabase Storage
+                    new_image_url = upload_to_supabase_storage(file)
+                    if new_image_url:
+                        issue.image_url = new_image_url
+                    else:
+                        print("Warning: Image upload to Supabase failed, keeping old image")
             
             db.session.commit()
             
