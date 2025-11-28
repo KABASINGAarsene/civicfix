@@ -58,6 +58,9 @@
     <script src="notifications.js"></script>
     <script src="auth.js"></script>
     <script>
+        // API configuration
+        const API_BASE_URL = 'https://civicfix-cwz8.onrender.com';
+        
         document.addEventListener('DOMContentLoaded', function() {
             const loginForm = document.getElementById('admin-login-form');
             const loginBtn = document.getElementById('login-btn');
@@ -75,7 +78,7 @@
                         password: formData.get('password')
                     };
 
-                    const response = await fetch('http://localhost:5000/api/admin/login', {
+                    const response = await fetch(`${API_BASE_URL}/api/admin/login`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
