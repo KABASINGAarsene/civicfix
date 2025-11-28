@@ -1588,6 +1588,56 @@
         // Global variables for issue details modal
         let currentIssueId = null;
         let currentIssueData = null;
+        let issueDetailsRefreshInterval = null;
+
+        // Function to refresh issue details (called periodically)
+        async function refreshIssueDetails() {
+            if (!currentIssueId) return;
+            
+            try {
+                const adminToken = localStorage.getItem('admin_token');
+                const response = await fetch(`${API_BASE_URL}/api/admin/issues/${currentIssueId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${adminToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const newIssue = data.issue;
+                    
+                    // Only update if data has changed
+                    if (JSON.stringify(currentIssueData) !== JSON.stringify(newIssue)) {
+                        console.log('Issue details updated - refreshing modal');
+                        currentIssueData = newIssue;
+                        populateIssueModal(newIssue);
+                    }
+                }
+            } catch (error) {
+                console.error('Error refreshing issue details:', error);
+            }
+        }
+
+        // Start auto-refresh for issue details
+        function startIssueDetailsRefresh() {
+            // Clear any existing interval
+            if (issueDetailsRefreshInterval) {
+                clearInterval(issueDetailsRefreshInterval);
+            }
+            
+            // Refresh every 5 seconds while modal is open
+            issueDetailsRefreshInterval = setInterval(refreshIssueDetails, 5000);
+            console.log('Issue details auto-refresh started (5 seconds)');
+        }
+
+        // Stop auto-refresh for issue details
+        function stopIssueDetailsRefresh() {
+            if (issueDetailsRefreshInterval) {
+                clearInterval(issueDetailsRefreshInterval);
+                issueDetailsRefreshInterval = null;
+                console.log('Issue details auto-refresh stopped');
+            }
+        }
 
         // Global functions for issue details modal
         async function viewIssueDetails(issueId) {
@@ -1611,6 +1661,9 @@
                     
                     // Populate modal with issue data
                     populateIssueModal(data.issue);
+                    
+                    // Start auto-refresh for this issue
+                    startIssueDetailsRefresh();
                     
                 } else {
                     const errorData = await response.json();
@@ -2075,6 +2128,7 @@
 
         function closeIssueDetailsModal() {
             document.getElementById('issue-details-modal').style.display = 'none';
+            stopIssueDetailsRefresh();
             currentIssueId = null;
             currentIssueData = null;
         }
