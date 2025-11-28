@@ -1724,6 +1724,7 @@ def create_app():
                     'user': {
                         'id': str(user.id),
                         'email': user.email,
+                        'username': user.username,
                         'province': user.province,
                         'district': user.district,
                         'is_district_admin': user.is_district_admin
