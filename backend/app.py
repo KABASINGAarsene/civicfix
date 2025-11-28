@@ -19,7 +19,7 @@ from sqlalchemy import text
 
 from config import Config
 from models import db, User, Issue, Vote, Notification, StatusHistory, AdminComment
-from auth import token_required, admin_required, optional_auth, get_supabase_client
+from auth import token_required, admin_required, optional_auth, get_supabase_client, get_supabase_service_client
 
 # Global SocketIO instance (initialized in create_app)
 socketio = None
@@ -152,30 +152,47 @@ def create_app():
     def upload_to_supabase_storage(file, bucket_name='issue-images'):
         """Upload image to Supabase Storage and return public URL"""
         try:
-            supabase = get_supabase_client()
+            print(f"[IMAGE UPLOAD] Starting upload for file: {file.filename}")
+            
+            supabase = get_supabase_service_client()
+            print(f"[IMAGE UPLOAD] Supabase service client initialized")
             
             # Generate unique filename
             filename = secure_filename(file.filename)
             filename = f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}_{filename}"
+            print(f"[IMAGE UPLOAD] Generated filename: {filename}")
             
             # Read file content
             file_content = file.read()
+            print(f"[IMAGE UPLOAD] File size: {len(file_content)} bytes")
+            
+            # Reset file pointer for potential re-read
+            file.seek(0)
             
             # Upload to Supabase Storage
+            print(f"[IMAGE UPLOAD] Uploading to bucket: {bucket_name}")
             response = supabase.storage.from_(bucket_name).upload(
                 path=filename,
                 file=file_content,
                 file_options={"content-type": file.content_type}
             )
+            print(f"[IMAGE UPLOAD] Upload response: {response}")
             
             # Get public URL
             public_url = supabase.storage.from_(bucket_name).get_public_url(filename)
+            print(f"[IMAGE UPLOAD] Public URL: {public_url}")
             
-            print(f"Image uploaded to Supabase: {public_url}")
+            if not public_url:
+                print(f"[IMAGE UPLOAD] ERROR: Failed to get public URL")
+                return None
+            
+            print(f"[IMAGE UPLOAD] SUCCESS: Image uploaded to {public_url}")
             return public_url
             
         except Exception as e:
-            print(f"Error uploading to Supabase Storage: {e}")
+            print(f"[IMAGE UPLOAD] ERROR: {str(e)}")
+            import traceback
+            print(f"[IMAGE UPLOAD] Traceback: {traceback.format_exc()}")
             return None
     
     # Routes
@@ -598,14 +615,27 @@ def create_app():
             
             # Handle image upload to Supabase Storage
             image_url = None
+            print(f"[CREATE ISSUE] Checking for image in request.files")
+            print(f"[CREATE ISSUE] request.files keys: {list(request.files.keys())}")
+            
             if 'image' in request.files:
                 file = request.files['image']
-                if file and file.filename and allowed_file(file.filename):
-                    # Upload to Supabase Storage
-                    image_url = upload_to_supabase_storage(file)
-                    if not image_url:
-                        print("Warning: Image upload to Supabase failed, continuing without image")
-                        image_url = None
+                print(f"[CREATE ISSUE] Image file found: {file.filename}")
+                
+                if file and file.filename:
+                    print(f"[CREATE ISSUE] File has content, checking if allowed")
+                    if allowed_file(file.filename):
+                        print(f"[CREATE ISSUE] File type allowed, uploading to Supabase")
+                        # Upload to Supabase Storage
+                        image_url = upload_to_supabase_storage(file)
+                        if image_url:
+                            print(f"[CREATE ISSUE] Image uploaded successfully: {image_url}")
+                        else:
+                            print(f"[CREATE ISSUE] Warning: Image upload to Supabase failed, continuing without image")
+                    else:
+                        print(f"[CREATE ISSUE] File type not allowed: {file.filename}")
+            else:
+                print(f"[CREATE ISSUE] No image in request.files")
             
             # Verify user is authenticated
             if not hasattr(request, 'current_user') or not request.current_user:

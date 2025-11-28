@@ -10,6 +10,14 @@ def get_supabase_client():
     key = current_app.config['SUPABASE_KEY']
     return create_client(url, key)
 
+def get_supabase_service_client():
+    """Get Supabase client with service role key (bypasses RLS)"""
+    url = current_app.config['SUPABASE_URL']
+    key = current_app.config['SUPABASE_SERVICE_ROLE_KEY']
+    if not key:
+        raise ValueError("SUPABASE_SERVICE_ROLE_KEY not configured")
+    return create_client(url, key)
+
 def verify_supabase_token(token):
     """Verify Supabase JWT token and return user data"""
     try:
