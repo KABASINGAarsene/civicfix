@@ -12,6 +12,9 @@ class CivicFixApp {
             sector: '',
             search: ''
         };
+        this.autoRefreshInterval = null;
+        this.autoRefreshEnabled = true;
+        this.refreshIntervalSeconds = 10; // Auto-refresh every 10 seconds
         this.init();
     }
 
@@ -21,7 +24,28 @@ class CivicFixApp {
             this.setupEventListeners();
             this.populateInitialDistricts();
             this.loadIssues();
+            // Start auto-refresh for citizen issues
+            this.startAutoRefresh();
         }, 1000);
+    }
+
+    startAutoRefresh() {
+        if (!this.autoRefreshEnabled) return;
+        
+        console.log(`Citizen issues auto-refresh started: every ${this.refreshIntervalSeconds} seconds`);
+        
+        this.autoRefreshInterval = setInterval(() => {
+            console.log('Auto-refreshing citizen issues...');
+            this.loadIssues(this.currentPage);
+        }, this.refreshIntervalSeconds * 1000);
+    }
+
+    stopAutoRefresh() {
+        if (this.autoRefreshInterval) {
+            clearInterval(this.autoRefreshInterval);
+            this.autoRefreshInterval = null;
+            console.log('Citizen issues auto-refresh stopped');
+        }
     }
 
     setupEventListeners() {
