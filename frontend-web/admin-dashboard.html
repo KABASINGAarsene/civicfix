@@ -1079,7 +1079,8 @@
 
                 this.setupEventListeners();
                 this.displayAdminInfo();
-                this.loadIssues();
+                // Call loadIssues asynchronously
+                this.loadIssues().catch(err => console.error('Failed to load issues on init:', err));
                 // Real-time updates are now handled by the shared WebSocketManager
                 // defined in websocket.js, so we no longer need a second
                 // WebSocket connection here.
