@@ -608,21 +608,22 @@ def create_app():
             db.session.commit()
             
             # Notify admins and all connected clients about the new issue
-            try:
-                payload = {
-                    'type': 'new_issue',
-                    'message': f"New issue reported: {issue.title}",
-                    'issue': issue.to_dict()
-                }
+            # Socket.IO is disabled for production, so we skip real-time notifications
+            # try:
+            #     payload = {
+            #         'type': 'new_issue',
+            #         'message': f"New issue reported: {issue.title}",
+            #         'issue': issue.to_dict()
+            #     }
 
-                # Existing behaviour: notify admins watching the dashboard
-                socketio.emit('admin_update', payload, room='admins')
+            #     # Existing behaviour: notify admins watching the dashboard
+            #     socketio.emit('admin_update', payload, room='admins')
 
-                # New behaviour: broadcast generic new_issue event to everyone
-                # (citizens on the main feed, admins, and any other listeners)
-                socketio.emit('new_issue', payload, broadcast=True)
-            except Exception as socket_error:
-                print(f"SocketIO error (non-critical): {socket_error}")
+            #     # New behaviour: broadcast generic new_issue event to everyone
+            #     # (citizens on the main feed, admins, and any other listeners)
+            #     socketio.emit('new_issue', payload, broadcast=True)
+            # except Exception as socket_error:
+            #     print(f"SocketIO error (non-critical): {socket_error}")
             
             return jsonify({
                 'message': 'Issue created successfully',
@@ -761,20 +762,21 @@ def create_app():
             db.session.commit()
             
             # Send real-time notification to the issue reporter
-            if old_status != new_status:
-                socketio.emit('status_update', {
-                    'message': f"Your issue '{issue.title}' status changed to {new_status}",
-                    'issue_id': issue.id,
-                    'new_status': new_status,
-                    'issue': issue.to_dict()
-                }, room=f"user_{issue.user_id}")
-                
-                # Notify all admins about the status change
-                socketio.emit('admin_update', {
-                    'type': 'status_change',
-                    'message': f"Issue #{issue.id} status changed to {new_status}",
-                    'issue': issue.to_dict()
-                }, room='admins')
+            # Socket.IO disabled - real-time notifications skipped
+            # if old_status != new_status:
+            #     socketio.emit('status_update', {
+            #         'message': f"Your issue '{issue.title}' status changed to {new_status}",
+            #         'issue_id': issue.id,
+            #         'new_status': new_status,
+            #         'issue': issue.to_dict()
+            #     }, room=f"user_{issue.user_id}")
+            #     
+            #     # Notify all admins about the status change
+            #     socketio.emit('admin_update', {
+            #         'type': 'status_change',
+            #         'message': f"Issue #{issue.id} status changed to {new_status}",
+            #         'issue': issue.to_dict()
+            #     }, room='admins')
             
             return jsonify({
                 'message': 'Issue status updated successfully',
@@ -806,12 +808,13 @@ def create_app():
                 db.session.commit()
                 
                 # Send real-time vote update to all users
-                socketio.emit('vote_update', {
-                    'issue_id': issue_id,
-                    'vote_count': issue.vote_count,
-                    'issue_owner_id': str(issue.user_id),  # Include issue owner ID for smart notifications
-                    'message': f"Vote removed from issue #{issue_id}"
-                })
+                # Socket.IO disabled - real-time notifications skipped
+                # socketio.emit('vote_update', {
+                #     'issue_id': issue_id,
+                #     'vote_count': issue.vote_count,
+                #     'issue_owner_id': str(issue.user_id),  # Include issue owner ID for smart notifications
+                #     'message': f"Vote removed from issue #{issue_id}"
+                # })
                 
                 return jsonify({
                     'message': 'Vote removed successfully',
@@ -828,12 +831,13 @@ def create_app():
                 db.session.commit()
                 
                 # Send real-time vote update to all users
-                socketio.emit('vote_update', {
-                    'issue_id': issue_id,
-                    'vote_count': issue.vote_count,
-                    'issue_owner_id': str(issue.user_id),  # Include issue owner ID for smart notifications
-                    'message': f"Issue #{issue_id} received a new vote"
-                })
+                # Socket.IO disabled - real-time notifications skipped
+                # socketio.emit('vote_update', {
+                #     'issue_id': issue_id,
+                #     'vote_count': issue.vote_count,
+                #     'issue_owner_id': str(issue.user_id),  # Include issue owner ID for smart notifications
+                #     'message': f"Issue #{issue_id} received a new vote"
+                # })
                 
                 return jsonify({
                     'message': 'Vote recorded successfully',
@@ -1697,25 +1701,26 @@ def create_app():
             db.session.commit()
             
             # Send real-time notification to all users
-            socketio.emit('new_issue', {
-                'issue_id': issue.id,
-                'title': issue.title,
-                'category': issue.category,
-                'location': issue.location_address or 'Location provided',
-                'message': f"New {issue.category} issue reported: {issue.title}"
-            })
-            
-            # Send special notification to admins
-            socketio.emit('admin_new_issue', {
-                'issue_id': issue.id,
-                'title': issue.title,
-                'category': issue.category,
-                'location': issue.location_address or 'Location provided',
-                'description': issue.description,
-                'reporter_email': request.current_user.email,
-                'message': f"ADMIN ALERT: New {issue.category} issue requires attention",
-                'priority': 'high' if issue.category in ['Emergency', 'Safety'] else 'normal'
-            }, room='admins')
+            # Socket.IO disabled - real-time notifications skipped
+            # socketio.emit('new_issue', {
+            #     'issue_id': issue.id,
+            #     'title': issue.title,
+            #     'category': issue.category,
+            #     'location': issue.location_address or 'Location provided',
+            #     'message': f"New {issue.category} issue reported: {issue.title}"
+            # })
+            # 
+            # # Send special notification to admins
+            # socketio.emit('admin_new_issue', {
+            #     'issue_id': issue.id,
+            #     'title': issue.title,
+            #     'category': issue.category,
+            #     'location': issue.location_address or 'Location provided',
+            #     'description': issue.description,
+            #     'reporter_email': request.current_user.email,
+            #     'message': f"ADMIN ALERT: New {issue.category} issue requires attention",
+            #     'priority': 'high' if issue.category in ['Emergency', 'Safety'] else 'normal'
+            # }, room='admins')
             
             # Send notification to issue reporter
             notification = Notification(
