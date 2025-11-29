@@ -523,6 +523,7 @@ def create_app():
     
     # Issue routes
     @app.route('/api/issues', methods=['GET'])
+    @limiter.exempt  # Exempt from rate limiting since this is polled frequently by auto-refresh
     @optional_auth
     def get_issues():
         """Get all issues with optional filtering and search"""
@@ -1092,6 +1093,7 @@ def create_app():
         })
     
     @app.route('/api/admin/issues', methods=['GET'])
+    @limiter.exempt  # Exempt from rate limiting since this is polled frequently by auto-refresh
     def admin_get_issues():
         """Admin view of issues filtered by their district"""
         try:
