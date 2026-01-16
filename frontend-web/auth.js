@@ -12,8 +12,14 @@ let supabaseClient = null;
 // Load Supabase from CDN
 function loadSupabase() {
     return new Promise((resolve, reject) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/8aa8b071-71d5-477a-8bef-6a3f143aedad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.js:13',message:'loadSupabase called',data:{supabaseClientExists:!!supabaseClient},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
         // Check if Supabase client is already initialized
         if (supabaseClient) {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/8aa8b071-71d5-477a-8bef-6a3f143aedad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.js:17',message:'supabaseClient already exists, resolving',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+            // #endregion
             resolve();
             return;
         }
@@ -21,9 +27,15 @@ function loadSupabase() {
         // Check if the script is already being loaded
         const existingScript = document.querySelector('script[data-supabase-loader]');
         if (existingScript) {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/8aa8b071-71d5-477a-8bef-6a3f143aedad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.js:22',message:'Script already loading, waiting',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+            // #endregion
             // Wait for it to load
             const checkInterval = setInterval(() => {
                 if (supabaseClient) {
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/8aa8b071-71d5-477a-8bef-6a3f143aedad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.js:27',message:'supabaseClient initialized from existing script',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+                    // #endregion
                     clearInterval(checkInterval);
                     resolve();
                 }
@@ -45,7 +57,13 @@ function loadSupabase() {
         script.async = true;
         script.crossOrigin = 'anonymous';
         script.setAttribute('data-supabase-loader', 'true');
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/8aa8b071-71d5-477a-8bef-6a3f143aedad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.js:43',message:'Creating script tag to load Supabase',data:{src:script.src},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
         script.onload = () => {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/8aa8b071-71d5-477a-8bef-6a3f143aedad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.js:48',message:'Script onload fired',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
             try {
                 // Wait a bit for the library to fully initialize
                 setTimeout(() => {
@@ -53,12 +71,33 @@ function loadSupabase() {
                     // Check multiple possible locations
                     let createClientFn = null;
                     
+                    // #region agent log
+                    const windowCheck = {
+                        hasWindowSupabase: typeof window.supabase !== 'undefined',
+                        windowSupabaseType: typeof window.supabase,
+                        hasWindowSupabaseCreateClient: typeof window.supabase?.createClient,
+                        hasWindowSupabase: typeof window.Supabase !== 'undefined',
+                        hasWindowCreateClient: typeof window.createClient === 'function',
+                        windowKeys: Object.keys(window).filter(k => k.toLowerCase().includes('supabase'))
+                    };
+                    fetch('http://127.0.0.1:7242/ingest/8aa8b071-71d5-477a-8bef-6a3f143aedad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.js:56',message:'Checking for createClient',data:windowCheck,timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                    // #endregion
+                    
                     if (window.supabase && typeof window.supabase.createClient === 'function') {
                         createClientFn = window.supabase.createClient;
+                        // #region agent log
+                        fetch('http://127.0.0.1:7242/ingest/8aa8b071-71d5-477a-8bef-6a3f143aedad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.js:57',message:'Found createClient in window.supabase',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                        // #endregion
                     } else if (window.Supabase && typeof window.Supabase.createClient === 'function') {
                         createClientFn = window.Supabase.createClient;
+                        // #region agent log
+                        fetch('http://127.0.0.1:7242/ingest/8aa8b071-71d5-477a-8bef-6a3f143aedad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.js:59',message:'Found createClient in window.Supabase',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                        // #endregion
                     } else if (typeof window.createClient === 'function') {
                         createClientFn = window.createClient;
+                        // #region agent log
+                        fetch('http://127.0.0.1:7242/ingest/8aa8b071-71d5-477a-8bef-6a3f143aedad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.js:61',message:'Found createClient in window.createClient',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                        // #endregion
                     } else {
                         // Last resort: check if the library exposed it differently
                         console.warn('Checking for Supabase exports...', {
@@ -67,12 +106,28 @@ function loadSupabase() {
                             hasWindowSupabaseCreateClient: typeof window.supabase?.createClient,
                             windowKeys: Object.keys(window).filter(k => k.toLowerCase().includes('supabase'))
                         });
+                        // #region agent log
+                        fetch('http://127.0.0.1:7242/ingest/8aa8b071-71d5-477a-8bef-6a3f143aedad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.js:64',message:'createClient not found in expected locations',data:windowCheck,timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                        // #endregion
                     }
                     
                     if (createClientFn) {
-                        supabaseClient = createClientFn(SUPABASE_URL, SUPABASE_ANON_KEY);
-                        console.log('Supabase client initialized successfully');
-                        resolve();
+                        // #region agent log
+                        fetch('http://127.0.0.1:7242/ingest/8aa8b071-71d5-477a-8bef-6a3f143aedad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.js:73',message:'Calling createClient',data:{hasCreateClientFn:!!createClientFn},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                        // #endregion
+                        try {
+                            supabaseClient = createClientFn(SUPABASE_URL, SUPABASE_ANON_KEY);
+                            // #region agent log
+                            fetch('http://127.0.0.1:7242/ingest/8aa8b071-71d5-477a-8bef-6a3f143aedad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.js:74',message:'supabaseClient initialized successfully',data:{hasAuth:!!supabaseClient?.auth},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                            // #endregion
+                            console.log('Supabase client initialized successfully');
+                            resolve();
+                        } catch (initError) {
+                            // #region agent log
+                            fetch('http://127.0.0.1:7242/ingest/8aa8b071-71d5-477a-8bef-6a3f143aedad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.js:74',message:'Error initializing supabaseClient',data:{error:initError.message,stack:initError.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                            // #endregion
+                            reject(initError);
+                        }
                     } else {
                         // Try one more time with a direct require-style access
                         try {
@@ -81,7 +136,7 @@ function loadSupabase() {
                             if (supabaseLib && supabaseLib.createClient) {
                                 supabaseClient = supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                                 console.log('Supabase client initialized successfully (fallback)');
-                                resolve();
+            resolve();
                             } else {
                                 throw new Error('createClient not found');
                             }
@@ -103,6 +158,9 @@ function loadSupabase() {
             }
         };
         script.onerror = (error) => {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/8aa8b071-71d5-477a-8bef-6a3f143aedad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.js:105',message:'Script onerror fired - CDN load failed',data:{error:error?.message || 'Unknown error'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
             console.error('Failed to load Supabase library from CDN:', error);
             reject(new Error('Failed to load Supabase library from CDN. Please check your internet connection.'));
         };
@@ -264,14 +322,26 @@ class AuthManager {
     }
 
     async signIn(email, password) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/8aa8b071-71d5-477a-8bef-6a3f143aedad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.js:281',message:'signIn called',data:{hasSupabaseClient:!!supabaseClient,hasAuth:!!supabaseClient?.auth},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
         try {
             // Ensure Supabase is initialized
             if (!supabaseClient) {
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/8aa8b071-71d5-477a-8bef-6a3f143aedad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.js:284',message:'supabaseClient is null, calling loadSupabase',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+                // #endregion
                 console.log('Supabase not initialized, loading...');
                 await loadSupabase();
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/8aa8b071-71d5-477a-8bef-6a3f143aedad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.js:287',message:'loadSupabase completed',data:{hasSupabaseClient:!!supabaseClient,hasAuth:!!supabaseClient?.auth},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+                // #endregion
             }
             
             if (!supabaseClient || !supabaseClient.auth) {
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/8aa8b071-71d5-477a-8bef-6a3f143aedad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.js:289',message:'supabaseClient or auth is missing after load',data:{hasSupabaseClient:!!supabaseClient,hasAuth:!!supabaseClient?.auth},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                // #endregion
                 const errorMsg = 'Authentication service is not available. Please refresh the page and try again.';
                 console.error('Supabase not available:', supabaseClient);
                 showNotification(errorMsg, 'error');
@@ -296,10 +366,16 @@ class AuthManager {
             }
 
             // Try Supabase login
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/8aa8b071-71d5-477a-8bef-6a3f143aedad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.js:299',message:'Calling signInWithPassword',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+            // #endregion
             const { data, error } = await supabaseClient.auth.signInWithPassword({
                 email: email,
                 password: password
             });
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/8aa8b071-71d5-477a-8bef-6a3f143aedad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.js:302',message:'signInWithPassword response',data:{hasError:!!error,errorMessage:error?.message,hasData:!!data},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+            // #endregion
 
             if (error) {
                 // If Supabase says email not confirmed, but our backend says it is, 
@@ -578,22 +654,22 @@ if (typeof window !== 'undefined') {
             
             if (supabaseClient && supabaseClient.auth) {
                 supabaseClient.auth.onAuthStateChange((event, session) => {
-                    if (event === 'SIGNED_IN') {
+                if (event === 'SIGNED_IN') {
                         if (window.authManager) {
                             window.authManager.currentUser = session.user;
                             window.authManager.token = session.access_token;
                             localStorage.setItem('supabase_token', window.authManager.token);
                             window.authManager.updateUI();
                         }
-                    } else if (event === 'SIGNED_OUT') {
+                } else if (event === 'SIGNED_OUT') {
                         if (window.authManager) {
                             window.authManager.currentUser = null;
                             window.authManager.token = null;
-                            localStorage.removeItem('supabase_token');
+                    localStorage.removeItem('supabase_token');
                             window.authManager.updateUI();
                         }
-                    }
-                });
+                }
+            });
             }
         } catch (error) {
             console.error('Failed to set up auth state listener:', error);
