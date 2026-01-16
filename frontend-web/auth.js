@@ -428,8 +428,9 @@ class AuthManager {
             try {
                 if (supabaseClient && supabaseClient.auth) {
                     const { error } = await supabaseClient.auth.signOut();
-                if (error && !error.message.includes('session_not_found')) {
-                    console.warn('Supabase signout warning:', error);
+                    if (error && !error.message.includes('session_not_found')) {
+                        console.warn('Supabase signout warning:', error);
+                    }
                 }
             } catch (supabaseError) {
                 console.log('Supabase signout error (continuing anyway):', supabaseError);
