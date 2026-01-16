@@ -6,24 +6,106 @@ window.API_BASE_URL = API_BASE_URL; // Make available globally
 const SUPABASE_URL = 'https://ozaaasesvvjphzohfxoo.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96YWFhc2VzdnZqcGh6b2hmeG9vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxMzMyODUsImV4cCI6MjA3NTcwOTI4NX0._GuX8DO9nFk1nP_EQAm3kFmzi6rQVUOCIGwtd6ERNcI';
 
-// Initialize Supabase client
-let supabase;
+// Initialize Supabase client (using different name to avoid conflicts with library's global)
+let supabaseClient = null;
 
 // Load Supabase from CDN
 function loadSupabase() {
     return new Promise((resolve, reject) => {
-        if (window.supabase) {
+        // Check if Supabase client is already initialized
+        if (supabaseClient) {
             resolve();
             return;
         }
         
+        // Check if the script is already being loaded
+        const existingScript = document.querySelector('script[data-supabase-loader]');
+        if (existingScript) {
+            // Wait for it to load
+            const checkInterval = setInterval(() => {
+                if (supabaseClient) {
+                    clearInterval(checkInterval);
+                    resolve();
+                }
+            }, 100);
+            
+            // Timeout after 10 seconds
+            setTimeout(() => {
+                clearInterval(checkInterval);
+                if (!supabaseClient) {
+                    reject(new Error('Supabase failed to load'));
+                }
+            }, 10000);
+            return;
+        }
+        
+        // Load Supabase using UMD build from unpkg (more reliable)
         const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+        script.src = 'https://unpkg.com/@supabase/supabase-js@2/dist/umd/index.min.js';
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+        script.setAttribute('data-supabase-loader', 'true');
         script.onload = () => {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            resolve();
+            try {
+                // Wait a bit for the library to fully initialize
+                setTimeout(() => {
+                    // The UMD build from @supabase/supabase-js@2 exposes createClient
+                    // Check multiple possible locations
+                    let createClientFn = null;
+                    
+                    if (window.supabase && typeof window.supabase.createClient === 'function') {
+                        createClientFn = window.supabase.createClient;
+                    } else if (window.Supabase && typeof window.Supabase.createClient === 'function') {
+                        createClientFn = window.Supabase.createClient;
+                    } else if (typeof window.createClient === 'function') {
+                        createClientFn = window.createClient;
+                    } else {
+                        // Last resort: check if the library exposed it differently
+                        console.warn('Checking for Supabase exports...', {
+                            hasWindowSupabase: typeof window.supabase !== 'undefined',
+                            windowSupabaseType: typeof window.supabase,
+                            hasWindowSupabaseCreateClient: typeof window.supabase?.createClient,
+                            windowKeys: Object.keys(window).filter(k => k.toLowerCase().includes('supabase'))
+                        });
+                    }
+                    
+                    if (createClientFn) {
+                        supabaseClient = createClientFn(SUPABASE_URL, SUPABASE_ANON_KEY);
+                        console.log('Supabase client initialized successfully');
+                        resolve();
+                    } else {
+                        // Try one more time with a direct require-style access
+                        try {
+                            // Some UMD builds expose it as a global function
+                            const supabaseLib = window.supabase || window.Supabase;
+                            if (supabaseLib && supabaseLib.createClient) {
+                                supabaseClient = supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                                console.log('Supabase client initialized successfully (fallback)');
+                                resolve();
+                            } else {
+                                throw new Error('createClient not found');
+                            }
+                        } catch (fallbackError) {
+                            console.error('Supabase library loaded but createClient is not available', {
+                                error: fallbackError,
+                                windowSupabase: typeof window.supabase,
+                                windowSupabaseCreateClient: typeof window.supabase?.createClient,
+                                windowSupabaseObj: window.Supabase,
+                                windowCreateClient: typeof window.createClient
+                            });
+                            reject(new Error('Supabase library loaded but createClient is not available. Please refresh the page.'));
+                        }
+                    }
+                }, 300);
+            } catch (error) {
+                console.error('Error initializing Supabase client:', error);
+                reject(error);
+            }
         };
-        script.onerror = reject;
+        script.onerror = (error) => {
+            console.error('Failed to load Supabase library from CDN:', error);
+            reject(new Error('Failed to load Supabase library from CDN. Please check your internet connection.'));
+        };
         document.head.appendChild(script);
     });
 }
@@ -53,7 +135,17 @@ class AuthManager {
 
     async checkAuthState() {
         try {
-            const { data: { session } } = await supabase.auth.getSession();
+            // Ensure Supabase is initialized
+            if (!supabaseClient) {
+                await loadSupabase();
+            }
+            
+            if (!supabaseClient || !supabaseClient.auth) {
+                console.warn('Supabase not available for auth state check');
+                return;
+            }
+            
+            const { data: { session } } = await supabaseClient.auth.getSession();
             if (session) {
                 this.currentUser = session.user;
                 this.token = session.access_token;
@@ -106,8 +198,21 @@ class AuthManager {
 
     async signUp(email, password, username, userData = {}) {
         try {
+            // Ensure Supabase is initialized
+            if (!supabaseClient) {
+                console.log('Supabase not initialized, loading...');
+                await loadSupabase();
+            }
+            
+            if (!supabaseClient || !supabaseClient.auth) {
+                const errorMsg = 'Authentication service is not available. Please refresh the page and try again.';
+                console.error('Supabase not available:', supabaseClient);
+                showNotification(errorMsg, 'error');
+                return { success: false, error: errorMsg };
+            }
+            
             // First, register with Supabase with proper email confirmation redirect
-            const { data, error } = await supabase.auth.signUp({
+            const { data, error } = await supabaseClient.auth.signUp({
                 email: email,
                 password: password,
                 options: {
@@ -160,6 +265,19 @@ class AuthManager {
 
     async signIn(email, password) {
         try {
+            // Ensure Supabase is initialized
+            if (!supabaseClient) {
+                console.log('Supabase not initialized, loading...');
+                await loadSupabase();
+            }
+            
+            if (!supabaseClient || !supabaseClient.auth) {
+                const errorMsg = 'Authentication service is not available. Please refresh the page and try again.';
+                console.error('Supabase not available:', supabaseClient);
+                showNotification(errorMsg, 'error');
+                return { success: false, error: errorMsg };
+            }
+
             // First check if user is verified in our backend
             const verifyResponse = await fetch(`${API_BASE_URL}/api/auth/check-verification`, {
                 method: 'POST',
@@ -178,7 +296,7 @@ class AuthManager {
             }
 
             // Try Supabase login
-            const { data, error } = await supabase.auth.signInWithPassword({
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
                 email: email,
                 password: password
             });
@@ -232,7 +350,8 @@ class AuthManager {
             
             // Try to sign out from Supabase, but don't fail if it errors
             try {
-                const { error } = await supabase.auth.signOut();
+                if (supabaseClient && supabaseClient.auth) {
+                    const { error } = await supabaseClient.auth.signOut();
                 if (error && !error.message.includes('session_not_found')) {
                     console.warn('Supabase signout warning:', error);
                 }
@@ -292,7 +411,18 @@ class AuthManager {
 
     async resetPassword(email) {
         try {
-            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            // Ensure Supabase is initialized
+            if (!supabaseClient) {
+                await loadSupabase();
+            }
+            
+            if (!supabaseClient || !supabaseClient.auth) {
+                const errorMsg = 'Authentication service is not available. Please refresh the page and try again.';
+                showNotification(errorMsg, 'error');
+                return { success: false, error: errorMsg };
+            }
+            
+            const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
                 redirectTo: window.location.origin + '/reset-password.html'
             });
 
@@ -439,21 +569,34 @@ function showQuickNotification(message, type = 'success') {
 
 // Listen for auth state changes
 if (typeof window !== 'undefined') {
-    window.addEventListener('load', () => {
-        if (supabase) {
-            supabase.auth.onAuthStateChange((event, session) => {
-                if (event === 'SIGNED_IN') {
-                    authManager.currentUser = session.user;
-                    authManager.token = session.access_token;
-                    localStorage.setItem('supabase_token', authManager.token);
-                    authManager.updateUI();
-                } else if (event === 'SIGNED_OUT') {
-                    authManager.currentUser = null;
-                    authManager.token = null;
-                    localStorage.removeItem('supabase_token');
-                    authManager.updateUI();
-                }
-            });
+    window.addEventListener('load', async () => {
+        // Wait for Supabase to be initialized
+        try {
+            if (!supabaseClient) {
+                await loadSupabase();
+            }
+            
+            if (supabaseClient && supabaseClient.auth) {
+                supabaseClient.auth.onAuthStateChange((event, session) => {
+                    if (event === 'SIGNED_IN') {
+                        if (window.authManager) {
+                            window.authManager.currentUser = session.user;
+                            window.authManager.token = session.access_token;
+                            localStorage.setItem('supabase_token', window.authManager.token);
+                            window.authManager.updateUI();
+                        }
+                    } else if (event === 'SIGNED_OUT') {
+                        if (window.authManager) {
+                            window.authManager.currentUser = null;
+                            window.authManager.token = null;
+                            localStorage.removeItem('supabase_token');
+                            window.authManager.updateUI();
+                        }
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Failed to set up auth state listener:', error);
         }
     });
 }
